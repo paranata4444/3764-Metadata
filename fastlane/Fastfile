@@ -279,7 +279,7 @@ desc "Upload metadata"
                 first_name: "Natalia",
                 last_name: "Ponomarenko",
                 phone_number: "+380970104926",
-                email_address: ""Paranata4444@gmail.com	""
+                email_address: "Paranata4444@gmail.com"
               },
             reject_if_possible: false,
             overwrite_screenshots: false,
@@ -294,6 +294,7 @@ desc "Upload metadata"
     end
 
 end
+
 
 
 
