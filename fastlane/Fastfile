@@ -105,7 +105,7 @@ platform :ios do
         first_name: "Natalia",
         last_name: "Ponomarenko",
         phone_number: "+380970104926",
-        email_address: ""Paranata4444@gmail.com	""
+        email_address: "Paranata4444@gmail.com"
       },
       reject_if_possible: false,
       run_precheck_before_submit: true,
@@ -116,4 +116,5 @@ platform :ios do
     )
   end
 end
+
 
