@@ -1,51 +1,31 @@
-name: Publish ios metadata
+workflows:
+  upload_ios_metadata:
+    name: Upload iOS metadata
+    instance_type: mac_mini_m1
+    max_build_duration: 45
 
-on:
-  workflow_dispatch:
+    environment:
+      xcode: 16.2
+      groups:
+        # тут мають лежати APPSTORE_ISSUER_ID, APPSTORE_KEY_ID, APPSTORE_P8, APPLE_EMAIL
+        - appstore-connect
+      vars:
+        IOS_BUNDLE_ID: com.solkovalproj.app
+        APP_NAME: Highway Story
 
-jobs:
-  build:
-    name: Upload metadata
-    runs-on: macos-14
-    environment: production
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: 3.2
-          bundler-cache: true
+    scripts:
+      - name: Print working dir & contents
+        script: |
+          echo "PWD: $(pwd)"
+          ls -R
 
-      - name: Select Xcode version
-        run: sudo xcode-select -s '/Applications/Xcode_16.2.app/Contents/Developer'
+      - name: Install Ruby dependencies
+        script: |
+          bundle install || bundle install --path vendor/bundle
+          gem install fastlane-plugin-appicon || true
 
-
-      - name: Install the Apple certificate and provisioning profile
-        shell: bash
-        run: |
-          eval "$(ssh-agent -s)"
-          ssh-add - <<< "${MATCH_DEPLOY_KEY}"
-          bundle exec fastlane ios sync_certificates
-        env:
-          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-          APPSTORE_P8: ${{ secrets.APPSTORE_P8 }}
-
-          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
-          #IOS_BUNDLE_ID_ONESIGNAL: ${{ vars.IOS_BUNDLE_ID_ONESIGNAL }}
-
-          GH_PAT: ${{ secrets.GH_PAT }}
-          GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }}
-          MATCH_REPOSITORY: ${{ secrets.MATCH_REPOSITORY }}
-          MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY }}
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-
-      - name: Install required dependencies
-        run: |
-          gem install fastlane-plugin-appicon
-
-      - name: Validate directory structure
-        run: | 
+      - name: Validate metadata directory structure
+        script: |
           echo "===== Validating Metadata ====="
           # Check that metadata folder exists
           if [ ! -d "./fastlane/metadata" ]; then
@@ -106,28 +86,18 @@ jobs:
           
           echo "Metadata validation successful!"
 
-      - name: Run fastlane
-        env:
-          APPLE_CONNECT_EMAIL: ${{ secrets.APPLE_EMAIL }}
-          APPLE_DEVELOPER_EMAIL: ${{ secrets.APPLE_EMAIL }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-
-          MATCH_REPOSITORY: ${{ secrets.MATCH_REPOSITORY }}
-          MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY }}
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-
-          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-          APPSTORE_P8: ${{ secrets.APPSTORE_P8 }}
-
-          IOS_BUILD_PATH: ${{ github.workspace }}
-          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
-          #IOS_BUNDLE_ID_ONESIGNAL: ${{ vars.IOS_BUNDLE_ID_ONESIGNAL }}
-          PROJECT_NAME: ${{ secrets.APP_NAME }}
-        run: |
-          eval "$(ssh-agent -s)"
-          ssh-add - <<< "${MATCH_DEPLOY_KEY}"
-          bundle install
-          
-          # Run the upload task
+      - name: Upload metadata via fastlane deliver
+        script: |
           bundle exec fastlane ios upload_metadata
+
+    artifacts:
+      - fastlane/logs/**/*
+
+    #це потрібно, щоб отримувати сповіщення по пошту
+    #publishing:
+    #  email:
+    #    recipients:
+    #      - $APPLE_EMAIL
+    #    notify:
+    #      success: true
+    #      failure: true
